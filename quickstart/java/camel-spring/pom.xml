@@ -16,7 +16,8 @@
      permissions and limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
@@ -146,7 +147,7 @@
           </excludes>
         </configuration>
       </plugin>
-      
+
       <!-- allows the route to be ran via 'mvn camel:run' -->
       <plugin>
         <groupId>org.apache.camel</groupId>
@@ -176,49 +177,6 @@
         </executions>
       </plugin>
 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.10</version>
-        <executions>
-          <execution>
-            <id>add-classpath</id>
-            <phase>package</phase>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <prefix>.</prefix>
-              <includeScope>runtime</includeScope>
-              <outputFile>${project.build.directory}/classpath</outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.jolokia</groupId>
-        <artifactId>docker-maven-plugin</artifactId>
-        <version>${docker.maven.plugin.version}</version>
-        <configuration>
-          <images>
-            <image>
-              <name>${docker.image}</name>
-              <build>
-                <from>${docker.from}</from>
-                <assembly>
-                  <basedir>/app</basedir>
-                  <descriptorRef>artifact-with-dependencies</descriptorRef>
-                </assembly>
-                <env>
-                  <JAVA_APP_JAR>${project.build.finalName}.jar</JAVA_APP_JAR>
-                  <JAVA_MAIN_CLASS>org.apache.camel.spring.Main</JAVA_MAIN_CLASS>
-                </env>
-              </build>
-            </image>
-          </images>
-        </configuration>
-      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -233,6 +191,198 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>vanilla</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+              <execution>
+                <id>add-classpath</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <prefix>.</prefix>
+                  <includeScope>runtime</includeScope>
+                  <outputFile>${project.build.directory}/classpath</outputFile>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.jolokia</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>${docker.maven.plugin.version}</version>
+            <configuration>
+              <images>
+                <image>
+                  <name>${docker.image}</name>
+                  <build>
+                    <from>${docker.from}</from>
+                    <assembly>
+                      <basedir>/app</basedir>
+                      <descriptorRef>artifact-with-dependencies</descriptorRef>
+                    </assembly>
+                    <env>
+                      <JAVA_APP_JAR>${project.build.finalName}.jar</JAVA_APP_JAR>
+                      <JAVA_MAIN_CLASS>org.apache.camel.spring.Main</JAVA_MAIN_CLASS>
+                    </env>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>hawtapp</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jboss.hawt.app</groupId>
+            <artifactId>hawt-app-maven-plugin</artifactId>
+            <version>1.3-SNAPSHOT</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <main>org.apache.camel.spring.Main</main>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.jolokia</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>${docker.maven.plugin.version}</version>
+            <configuration>
+              <images>
+                <image>
+                  <name>${docker.image}</name>
+                  <build>
+                    <from>${docker.from}</from>
+                    <assembly>
+                      <basedir>/hawt-app</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <includes>
+                              <include>bin/*</include>
+                            </includes>
+                            <directory>${project.build.directory}/hawt-app</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <fileMode>0755</fileMode>
+                          </fileSet>
+                          <fileSet>
+                            <includes>
+                              <include>lib/*</include>
+                            </includes>
+                            <directory>${project.build.directory}/hawt-app</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <fileMode>0644</fileMode>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                    <cmd>
+                      <shell>
+                        /hawt-app/bin/run
+                      </shell>
+                    </cmd>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>hawtapp-with-run-java</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jboss.hawt.app</groupId>
+            <artifactId>hawt-app-maven-plugin</artifactId>
+            <version>1.3-SNAPSHOT</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <main>org.apache.camel.spring.Main</main>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.jolokia</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>${docker.maven.plugin.version}</version>
+            <configuration>
+              <images>
+                <image>
+                  <name>${docker.image}</name>
+                  <build>
+                    <from>${docker.from}</from>
+                    <assembly>
+                      <basedir>/app</basedir>
+                      <inline>
+                        <fileSets>
+                          <fileSet>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                            <excludes>
+                              <exclude>.classpath</exclude>
+                            </excludes>
+                            <directory>${project.build.directory}/hawt-app/lib</directory>
+                            <outputDirectory>.</outputDirectory>
+                            <fileMode>0644</fileMode>
+                          </fileSet>
+                        </fileSets>
+                        <files>
+                          <file>
+                            <!-- TODO: Either adapt run-java-sh to work with multi-line classpath, too or allow hawt-app
+                               to crete a more classical classpath (one line, colon separated) -->
+                            <source>${project.build.directory}/hawt-app/lib/.classpath</source>
+                            <destName>classpath</destName>
+                          </file>
+                        </files>
+                      </inline>
+                    </assembly>
+                    <env>
+                      <JAVA_MAIN_CLASS>org.apache.camel.spring.Main</JAVA_MAIN_CLASS>
+                    </env>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+
     <profile>
       <id>docker-build</id>
       <build>
@@ -315,5 +465,5 @@
       <url>http://origin-repository.jboss.org/nexus/content/groups/ea</url>
     </pluginRepository>
   </pluginRepositories>
-    
+
 </project>
